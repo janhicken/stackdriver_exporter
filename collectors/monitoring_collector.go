@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"sort"
 	"sync"
 	"time"
 
@@ -242,7 +243,33 @@ func (c *MonitoringCollector) reportTimeSeriesMetrics(
 		constMetrics:      make(map[string][]ConstMetric),
 		histogramMetrics:  make(map[string][]HistogramMetric),
 	}
+	var dedup map[string]*monitoring.TimeSeries
+	dedup = make(map[string]*monitoring.TimeSeries)
 	for _, timeSeries := range page.TimeSeries {
+		var key string
+		key += fmt.Sprintf("%s/%s", timeSeries.Resource.Type, timeSeries.Metric.Type)
+
+		var metricLabels []string
+		for label, _ := range timeSeries.Metric.Labels {
+			metricLabels = append(metricLabels, label)
+		}
+		sort.Strings(metricLabels)
+		for _, label := range metricLabels {
+			key += fmt.Sprintf(";%s=%s", label, timeSeries.Metric.Labels[label])
+		}
+
+		var resourceLabels []string
+		for label, _ := range timeSeries.Resource.Labels {
+			resourceLabels = append(resourceLabels, label)
+		}
+		sort.Strings(resourceLabels)
+		for _, label := range resourceLabels {
+			key += fmt.Sprintf(";%s=%s", label, timeSeries.Resource.Labels[label])
+		}
+		dedup[key] = timeSeries
+	}
+
+	for _, timeSeries := range dedup {
 		newestEndTime := time.Unix(0, 0)
 		for _, point := range timeSeries.Points {
 			endTime, err := time.Parse(time.RFC3339Nano, point.Interval.EndTime)
