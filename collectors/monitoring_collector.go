@@ -214,7 +214,7 @@ func (c *MonitoringCollector) reportMonitoringMetrics(ch chan<- prometheus.Metri
 			log.Debugf("Listing Google Stackdriver Monitoring metric descriptors starting with `%s`...", metricsTypePrefix)
 			ctx := context.Background()
 			if err := c.monitoringService.Projects.MetricDescriptors.List(utils.ProjectResource(c.projectID)).
-				Filter(fmt.Sprintf("metric.type = starts_with(\"%s\")", metricsTypePrefix)).
+				Filter(fmt.Sprintf("metric.type = \"%s\"", metricsTypePrefix)).
 				Pages(ctx, metricDescriptorsFunction); err != nil {
 				errChannel <- err
 			}
@@ -267,6 +267,7 @@ func (c *MonitoringCollector) reportTimeSeriesMetrics(
 			key += fmt.Sprintf(";%s=%s", label, timeSeries.Resource.Labels[label])
 		}
 		dedup[key] = timeSeries
+    fmt.Printf("%s %s\n", timeSeries.Metric.Labels, timeSeries.Resource.Labels)
 	}
 
 	for _, timeSeries := range dedup {
